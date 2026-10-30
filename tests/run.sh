@@ -9,7 +9,7 @@ python3 tests/validate_skill.py $S
 echo "== install manifest matches the skill files"
 diff <(find $S -type f | sort) install-files.txt
 echo "== no em or en dashes"
-python3 - "$S" README.md <<'PY'
+python3 - "$S" README.md docs <<'PY'
 import pathlib, sys
 bad = []
 for root in sys.argv[1:]:

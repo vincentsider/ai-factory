@@ -21,6 +21,8 @@ It works with any stack (Node, Python, Go and others) and any host: Cloudflare W
 
 ## Install
 
+**New to this? Follow the step-by-step guide:** [English](docs/INSTALL.md) | [Français](docs/INSTALL.fr.md). It covers every plan (Free, Pro, Max, Team, Enterprise), what an owner does and what a member does, first use on the web and on a phone, updates, and fixes for common problems.
+
 ### Claude Code in the terminal or an IDE
 
 As a plugin, updated with the marketplace:
@@ -95,6 +97,8 @@ The nightly security review uses [sec-context](https://github.com/Arcanum-Sec/se
 ---
 
 ## En français : installer sur Claude Code web (claude.ai)
+
+**Guide complet pas à pas, pour les débutants : [docs/INSTALL.fr.md](docs/INSTALL.fr.md).** En résumé :
 
 1. Téléchargez `ai-factory.zip` depuis la [dernière version](https://github.com/vincentsider/ai-factory/releases/latest).
 2. Sur claude.ai : **Customize**, **Skills**, **+**, **Create skill**, **Upload a skill**, puis choisissez le fichier zip.
