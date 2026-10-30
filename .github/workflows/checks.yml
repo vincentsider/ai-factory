@@ -1,0 +1,47 @@
+name: Checks
+
+# Every push and pull request: the hook tests, the skill front matter, the
+# install manifest, workflow and shell lint. On a version tag (v*), also
+# builds ai-factory.zip (the upload format for claude.ai) and attaches it to
+# the GitHub release.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install actionlint and shellcheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) latest /usr/local/bin
+      - run: bash tests/run.sh
+
+  release:
+    name: Release zip
+    needs: checks
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build ai-factory.zip
+        run: cd skills && zip -r -X ../ai-factory.zip ai-factory
+      - name: Create the release with the zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" ai-factory.zip --title "$GITHUB_REF_NAME" --generate-notes \
+            || gh release upload "$GITHUB_REF_NAME" ai-factory.zip --clobber

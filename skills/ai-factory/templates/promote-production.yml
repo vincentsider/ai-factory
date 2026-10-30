@@ -1,0 +1,111 @@
+name: Promote to production
+
+# The human button. A person runs it from the Actions tab, on main. It puts
+# the commit that staging runs into production, checks production runs it,
+# then tags it vYYYY.MM.DD-N with release notes.
+# Guards (the run stops red with one clear sentence):
+#   - started from main,
+#   - the person is listed in the repository variable PROD_DEPLOYERS,
+#   - staging reports the latest main commit, and "Deploy to staging"
+#     succeeded for that commit.
+# Claude never starts this workflow: the repo's Claude Code hook blocks it.
+# ADAPT: the steps marked HOST ADAPTER.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Checks before production
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Started from main by an allowed person
+        env:
+          DEPLOYERS: ${{ vars.PROD_DEPLOYERS }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "::error::Run this from main, not $GITHUB_REF."; exit 1; }
+          LIST=",$(echo "$DEPLOYERS" | tr -d ' '),"
+          case "$LIST" in *",$ACTOR,"*) echo "$ACTOR may promote." ;; *) echo "::error::$ACTOR is not in PROD_DEPLOYERS."; exit 1 ;; esac
+      - name: Staging runs this commit, and its deploy succeeded
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_PATH: ${{ vars.VERSION_PATH || '/version.json' }}
+          VERIFY_TRIES: '1'
+        run: |
+          OK=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-staging.yml/runs?head_sha=${GITHUB_SHA}&status=success" --jq '.total_count')
+          [ "${OK:-0}" -gt 0 ] || { echo "::error::Deploy to staging has not succeeded for ${GITHUB_SHA::7}. Wait for it, or fix it first."; exit 1; }
+          bash .github/scripts/verify-live.sh "${{ vars.STAGING_URL }}" "$GITHUB_SHA" || { echo "::error::Staging is not on ${GITHUB_SHA::7}, the latest main."; exit 1; }
+
+  production:
+    name: Production
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: write # tag and release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # HOST ADAPTER: record the data store's restore point in the summary, if the host has one.
+      - name: Record restore point
+        run: echo "ADAPT - e.g. wrangler d1 time-travel info <db> >> \$GITHUB_STEP_SUMMARY"
+
+      # HOST ADAPTER: additive migrations on production.
+      - name: Migrations (production)
+        run: echo "ADAPT - run migrations against production here"
+
+      # HOST ADAPTER: deploy this same commit to production.
+      - name: Deploy (production)
+        run: echo "ADAPT - deploy ${GITHUB_SHA::7} to production here"
+
+      - name: Verify production runs this commit
+        env:
+          VERSION_PATH: ${{ vars.VERSION_PATH || '/version.json' }}
+        run: bash .github/scripts/verify-live.sh "${{ vars.PRODUCTION_URL }}" "$GITHUB_SHA" /
+
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git fetch -q --tags
+          if git tag --points-at "$GITHUB_SHA" | grep -q '^v20'; then echo "Already tagged"; exit 0; fi
+          DAY=$(date -u +%Y.%m.%d); N=$(git tag -l "v$DAY-*" | wc -l | tr -d ' ')
+          TAG="v$DAY-$((N+1))"; PREV=$(git tag -l 'v20*' --sort=-creatordate | head -1)
+          if [ -n "$PREV" ]; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --generate-notes --notes-start-tag "$PREV"
+          else
+            gh release create "$TAG" --target "$GITHUB_SHA" --title "$TAG" --notes "First tagged production release (${GITHUB_SHA::7})."
+          fi
+          echo "### Production is on \`${GITHUB_SHA::7}\`, released as $TAG" >> "$GITHUB_STEP_SUMMARY"
+
+  alert:
+    name: Alert on failure
+    needs: [guard, production]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          N=$(gh issue list --label pipeline-failure --state open --json number --jq '.[0].number // empty')
+          MSG="Promote to production failed for ${GITHUB_SHA::7}: $RUN_URL"
+          if [ -n "$N" ]; then gh issue comment "$N" --body "$MSG"; else gh issue create --label pipeline-failure --title "Pipeline failure" --body "$MSG"; fi

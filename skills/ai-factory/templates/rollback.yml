@@ -1,0 +1,71 @@
+name: Rollback
+
+# The other human button. Puts a previous release (tag vYYYY.MM.DD-N) back
+# into production. Same guards as promote: from main, person in PROD_DEPLOYERS.
+# It does not roll back data: migrations are additive, so old code works with
+# the current schema. Data restore, if ever needed: docs/cicd/rollback.md.
+# ADAPT: the step marked HOST ADAPTER (or use the host's native rollback).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to put back live, e.g. v2026.12.15-1'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Checks before rollback
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - env:
+          DEPLOYERS: ${{ vars.PROD_DEPLOYERS }}
+          ACTOR: ${{ github.actor }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          [ "$GITHUB_REF" = "refs/heads/main" ] || { echo "::error::Run this from main."; exit 1; }
+          LIST=",$(echo "$DEPLOYERS" | tr -d ' '),"
+          case "$LIST" in *",$ACTOR,"*) ;; *) echo "::error::$ACTOR is not in PROD_DEPLOYERS."; exit 1 ;; esac
+          echo "$TAG" | grep -Eq '^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9]+$' || { echo "::error::'$TAG' is not a release tag."; exit 1; }
+          git fetch -q --tags
+          git rev-parse -q --verify "refs/tags/$TAG" >/dev/null || { echo "::error::Tag $TAG does not exist."; exit 1; }
+
+  rollback:
+    name: Production rollback
+    needs: guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Resolve the tag's commit
+        id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # HOST ADAPTER: deploy the checked-out tag to production (no migrations).
+      - name: Deploy (production)
+        run: echo "ADAPT - deploy ${{ inputs.tag }} to production here"
+
+      - name: Verify production runs the tag
+        env:
+          VERSION_PATH: ${{ vars.VERSION_PATH || '/version.json' }}
+        run: |
+          # verify-live.sh comes from the tag's checkout; older tags may predate it.
+          if [ -f .github/scripts/verify-live.sh ]; then
+            bash .github/scripts/verify-live.sh "${{ vars.PRODUCTION_URL }}" "${{ steps.sha.outputs.sha }}" /
+          else
+            echo "::warning::This tag has no verify script; check ${{ vars.PRODUCTION_URL }} by hand."
+          fi
+          echo "### Production rolled back to ${{ inputs.tag }} (\`$(git rev-parse --short HEAD)\`)" >> "$GITHUB_STEP_SUMMARY"

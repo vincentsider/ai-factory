@@ -1,0 +1,72 @@
+name: Deploy to staging
+
+# Every merge into main: run the gate again, deploy that commit to staging,
+# then check staging really runs it. Nothing deploys on red.
+# Production is NOT touched here: a person presses "Promote to production".
+# ADAPT: the two steps marked HOST ADAPTER (see the skill's deploy reference).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/tests.yml
+
+  staging:
+    name: Staging
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: staging
+    steps:
+      - uses: actions/checkout@v7
+
+      # HOST ADAPTER: migrations on the staging data store, if any.
+      - name: Migrations (staging)
+        run: echo "ADAPT - run additive migrations against staging here"
+
+      # HOST ADAPTER: deploy this commit to staging, with the host's official action or CLI.
+      - name: Deploy (staging)
+        run: echo "ADAPT - deploy ${GITHUB_SHA::7} to staging here"
+
+      - name: Verify staging runs this commit
+        env:
+          VERSION_PATH: ${{ vars.VERSION_PATH || '/version.json' }}
+        run: bash .github/scripts/verify-live.sh "${{ vars.STAGING_URL }}" "$GITHUB_SHA" /
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### Staging is on \`${GITHUB_SHA::7}\`"
+            echo "${{ vars.STAGING_URL }}"
+            echo
+            echo "To go live: Actions, **Promote to production**, Run workflow (main)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  alert:
+    name: Alert on failure
+    needs: [test, staging]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the pipeline-failure issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          N=$(gh issue list --label pipeline-failure --state open --json number --jq '.[0].number // empty')
+          MSG="Deploy to staging failed for ${GITHUB_SHA::7}: $RUN_URL"
+          if [ -n "$N" ]; then gh issue comment "$N" --body "$MSG"; else gh issue create --label pipeline-failure --title "Pipeline failure" --body "$MSG"; fi

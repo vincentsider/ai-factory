@@ -1,0 +1,27 @@
+# Weekly dependency update PRs. Each one goes through the Tests gate like any
+# other PR. Framework major versions are planned by hand.
+# ADAPT: one "updates" entry per deployable part and ecosystem
+# (npm, pip, uv, gomod, cargo, bundler, composer, docker, ...).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # ADAPT: the project's framework(s).
+      - dependency-name: "FRAMEWORK_NAME"
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(ci)"

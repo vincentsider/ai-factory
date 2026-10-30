@@ -1,0 +1,87 @@
+name: Nightly security review
+
+# Every night Claude runs the Arcanum skill (.claude/skills/arcanum) over the
+# code that changed on main in the last 24 hours. Findings at MEDIUM or above
+# become a GitHub issue labelled "security". Nothing changed: the job exits
+# early and costs nothing. The job always publishes a report, so a silent
+# failure cannot look like a clean night.
+# GitHub schedules run in UTC and are best effort: a late start is normal.
+# ADAPT: the cron hour (quiet time for the team) and the file patterns.
+
+on:
+  schedule:
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Review changes since (git date, e.g. "7 days ago")'
+        required: false
+        default: '24 hours ago'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  arcanum:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Find what changed
+        id: changes
+        env:
+          SINCE: ${{ github.event.inputs.since || '24 hours ago' }}
+        run: |
+          BASE=$(git rev-list -1 --before="$SINCE" HEAD)
+          if [ -z "$BASE" ]; then BASE=$(git rev-list --max-parents=0 HEAD | tail -1); fi
+          FILES=$(git diff --name-only --diff-filter=AMR "$BASE" HEAD -- \
+            '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.py' '*.go' '*.rb' '*.php' '*.java' '*.rs' '*.sql' \
+            ':!**/__tests__/**' ':!**/*.test.*' ':!**/*.spec.*' ':!docs/**' ':!Docs/**' | head -200)
+          COUNT=$(printf '%s' "$FILES" | grep -c . || true)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          mkdir -p .nightly
+          printf '%s\n' "$FILES" > .nightly/changed-files.txt
+          echo "Changed code files since $SINCE: $COUNT"
+
+      - name: Arcanum review with Claude
+        if: steps.changes.outputs.count != '0'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            You are running the nightly security review for ${{ github.repository }}.
+            1. Use the Arcanum skill: read .claude/skills/arcanum/SKILL.md and follow it.
+               Do NOT read its reference files whole: Grep them for relevant patterns.
+            2. The files to review changed on main since ${{ steps.changes.outputs.base }}.
+               The list is in .nightly/changed-files.txt. Use
+               `git diff ${{ steps.changes.outputs.base }} HEAD -- <file>` and read the
+               surrounding code (callers, auth checks). Server code and API routes first.
+               If you cannot cover every file, say which ones you skipped.
+            3. Report only real, exploitable issues: file, line, severity (CRITICAL, HIGH,
+               MEDIUM, LOW), why it is exploitable, the fix. Never paste secret values.
+            4. ALWAYS write your report to .nightly/report.md before you finish: a one-line
+               verdict, the findings (or "No findings at MEDIUM or higher"), the files
+               reviewed and skipped. Plain language.
+            5. If you found at least one MEDIUM or higher issue, create an issue:
+               `gh issue create --label security --title "Nightly security review <today's date>: <N> findings" --body-file .nightly/report.md`
+          claude_args: |
+            --max-turns 150
+            --allowedTools "Read,Glob,Grep,Write(.nightly/report.md),Edit(.nightly/report.md),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh issue create:*),Bash(gh issue list:*)"
+
+      - name: Publish the report
+        if: always() && steps.changes.outputs.count != '0'
+        run: |
+          if [ -f .nightly/report.md ]; then
+            cat .nightly/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::The review finished without writing a report"
+            exit 1
+          fi

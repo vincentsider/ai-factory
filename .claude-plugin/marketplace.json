@@ -1,0 +1,17 @@
+{
+  "name": "ai-factory",
+  "owner": { "name": "Vincent Sider", "url": "https://github.com/vincentsider" },
+  "metadata": {
+    "description": "A professional, AI-safe development lifecycle for any repository: protected main, test gate, AI review, staging, a human production button, release tags, rollback, nightly security review.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ai-factory",
+      "description": "Sets up the whole pipeline on any repository, any stack, any host, in the terminal or on the web. Type /ai-factory in a project.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./skills/ai-factory"]
+    }
+  ]
+}
