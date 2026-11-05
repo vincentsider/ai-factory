@@ -22,6 +22,10 @@ HUMAN ACTION: Settings, Environments: `staging` (no rules) and `production` (Dep
 
 **Library profile:** no deploy. A `release.yml` on pushed tags `v*`: runs the gate, builds, publishes with the registry token or trusted publishing, creates the GitHub release with notes.
 
+Protected staging (Cloudflare Access, basic auth): the checks need a way in. For Cloudflare Access, the person creates a **service token** (Cloudflare, Zero Trust, Access, Service Auth, Create Service Token), adds a policy on the staging application that allows it (action "Service Auth"), and pastes its two values as repository secrets `STAGING_ACCESS_CLIENT_ID` and `STAGING_ACCESS_CLIENT_SECRET`. The workflows pass them to every check.
+
+**Public website?** If the project is a website anyone can visit, also do [website.md](website.md) right after this phase.
+
 ## 8.3 Several deployable parts
 Each part meets the contract. Keep one staging workflow and one promote workflow with one job per part (path-filtered on staging, all parts on promote), so a person presses one button. Give each web part its own URL variables (`STAGING_URL_API`, ...). A part that carries live traffic (calls, payments) may keep its own deploy workflow with a freeze switch: when the repository variable `PART_DEPLOY_FREEZE` is `true`, automatic runs skip with a clear message, manual runs still deploy.
 

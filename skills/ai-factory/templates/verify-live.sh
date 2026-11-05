@@ -4,13 +4,20 @@
 # expected commit in its "version" field (first 7 characters compared), then
 # checks that every PATH answers HTTP 200. Used by deploy-staging,
 # promote-production and rollback. Exit 1 with a clear message otherwise.
+# A protected staging site: set CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET
+# (Cloudflare Access service token) or EXTRA_HEADER ("Name: value").
 set -euo pipefail
+H=()
+if [ -n "${CF_ACCESS_CLIENT_ID:-}" ]; then
+  H+=(-H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET:-}")
+fi
+if [ -n "${EXTRA_HEADER:-}" ]; then H+=(-H "$EXTRA_HEADER"); fi
 BASE="${1:?base url}"; WANT="${2:?expected sha}"; shift 2
 WANT="${WANT:0:7}"
 VP="${VERSION_PATH:-/version.json}"
 TRIES="${VERIFY_TRIES:-60}"
 for i in $(seq 1 "$TRIES"); do
-  GOT=$(curl -fsS --max-time 10 "$BASE$VP" 2>/dev/null \
+  GOT=$(curl -fsS --max-time 10 ${H[@]+"${H[@]}"} "$BASE$VP" 2>/dev/null \
     | python3 -c 'import json,sys
 try:
   d=json.load(sys.stdin); print(str(d.get("version") or d.get("commit") or d.get("sha") or "")[:7])
@@ -21,7 +28,7 @@ except Exception: print("")' || true)
 done
 fail=0
 for p in "$@"; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$BASE$p")
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 ${H[@]+"${H[@]}"} "$BASE$p")
   echo "$p -> $code"; [ "$code" = "200" ] || fail=1
 done
 [ "$fail" = 0 ] || { echo "::error::A key page did not answer 200"; exit 1; }

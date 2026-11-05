@@ -3,6 +3,13 @@ name: Deploy to staging
 # Every merge into main: run the gate again, deploy that commit to staging,
 # then check staging really runs it. Nothing deploys on red.
 # Production is NOT touched here: a person presses "Promote to production".
+# Public websites only (repository variable PUBLIC_WEBSITE = true): after the
+# deploy, three website checks run on staging. Old addresses must lead to the
+# right page (REDIRECTS_MODE, blocks by default), what Google reads must be
+# there (SEO_MODE, warns by default), and the site must be usable by everyone
+# (A11Y_MODE, warns by default). A blocking failure makes this run red, and
+# "Promote to production" refuses a commit whose staging run is red.
+# Files: .github/website/key-pages.txt and .github/website/redirects.csv.
 # ADAPT: the two steps marked HOST ADAPTER (see the skill's deploy reference).
 
 on:
@@ -41,6 +48,8 @@ jobs:
       - name: Verify staging runs this commit
         env:
           VERSION_PATH: ${{ vars.VERSION_PATH || '/version.json' }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.STAGING_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.STAGING_ACCESS_CLIENT_SECRET }}
         run: bash .github/scripts/verify-live.sh "${{ vars.STAGING_URL }}" "$GITHUB_SHA" /
 
       - name: Summary
@@ -53,9 +62,64 @@ jobs:
             echo "To go live: Actions, **Promote to production**, Run workflow (main)."
           } >> "$GITHUB_STEP_SUMMARY"
 
+  website-checks:
+    name: Website checks
+    needs: staging
+    if: vars.PUBLIC_WEBSITE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      STAGING_URL: ${{ vars.STAGING_URL }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.STAGING_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.STAGING_ACCESS_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Old addresses lead to the right page
+        if: hashFiles('.github/website/redirects.csv') != ''
+        env:
+          REDIRECTS_MODE: ${{ vars.REDIRECTS_MODE || 'block' }}
+        run: python3 .github/scripts/check-redirects.py .github/website/redirects.csv "$STAGING_URL"
+
+      - name: Previous search-engine snapshot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy-staging.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$RUN" ]; then gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name seo-snapshot --dir .seo-prev || true; fi
+
+      - name: What Google and AI search engines read
+        env:
+          SEO_MODE: ${{ vars.SEO_MODE || 'warn' }}
+        run: python3 .github/scripts/seo-check.py .github/website/key-pages.txt "$STAGING_URL" --previous .seo-prev/seo-snapshot.json --snapshot seo-snapshot.json
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: seo-snapshot
+          path: seo-snapshot.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Usable by everyone (accessibility)
+        env:
+          A11Y_MODE: ${{ vars.A11Y_MODE || 'warn' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/a11y" && cp .github/scripts/a11y-check.mjs .github/website/key-pages.txt "$RUNNER_TEMP/a11y/"
+          cd "$RUNNER_TEMP/a11y" && npm init -y >/dev/null && npm i --no-save --no-audit --no-fund playwright@1.64.1 @axe-core/playwright@4.14.0
+          npx playwright install --with-deps chromium
+          node a11y-check.mjs key-pages.txt "$STAGING_URL"
+
   alert:
     name: Alert on failure
-    needs: [test, staging]
+    needs: [test, staging, website-checks]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

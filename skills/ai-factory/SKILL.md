@@ -1,10 +1,10 @@
 ---
 name: ai-factory
-description: Set up a professional, AI-safe development lifecycle on any repository, any stack, any host. Builds the whole pipeline - protected main, pull requests only, a required test gate, Claude review on every PR, staging, a human Promote to production button, post-deploy checks, dated release tags, rollback, nightly AI security review, Dependabot, alerts, and the Claude Code rules (CLAUDE.md, a blocking hook, a ship skill). Works in the terminal and in Claude Code on the web. Use when the user asks to set up CI/CD, a pipeline, an AI factory, branch protection, staging and production, or a professional development lifecycle for a project.
+description: Set up a professional, AI-safe development lifecycle on any repository, any stack, any host. Builds the whole pipeline - protected main, pull requests only, a required test gate, a test with every change (checked, with coverage), Claude review on every PR, staging, a human Promote to production button, post-deploy checks, website checks for public sites (old addresses, search engines, accessibility), dated release tags, rollback, nightly and weekly AI security reviews, Dependabot, alerts, and the Claude Code rules (CLAUDE.md, a blocking hook, a ship skill). Works in the terminal and in Claude Code on the web. Use when the user asks to set up CI/CD, a pipeline, an AI factory, branch protection, staging and production, or a professional development lifecycle for a project.
 license: MIT
 compatibility: Claude Code (terminal, IDE or claude.ai/code). Needs git and a GitHub repository; gh is used when available.
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
   author: Vincent Sider (DeepBlocker.ai)
   source: https://github.com/vincentsider/ai-factory
 ---
@@ -30,6 +30,7 @@ All files referenced below live in this skill's folder: `${CLAUDE_SKILL_DIR}`. C
 - Verify every step yourself (a command, an API read, a page that answers, a green run) and say how. If a check fails, say so with the error. Never claim something works that you did not see work.
 - Never put a secret in a file, commit, PR, issue or message. People paste secrets into GitHub or the host.
 - Never weaken a check to make it pass. A wrong check is fixed in its own PR, with the reason.
+- Every change you make, this setup included, comes with a test that proves it works. For a bug, first a test that fails because of the bug, then the fix. Never delete or weaken a test to make the gate pass.
 - You never deploy from your session and never start the promote or rollback workflows. Only GitHub Actions deploys; only people press the production buttons.
 - If other sessions or people may work in the same folder, use a git worktree. Never checkout, stash or rebase in their folder; never push commits that are not yours.
 - Log each finished phase in `docs/cicd/setup-log.md`: done, left, PR numbers. 3 to 5 lines.
@@ -67,11 +68,12 @@ Read each reference file when you reach its phase, not before. Open one PR per p
 | 3 | Prerequisites: GitHub plan, Actions minutes, Claude GitHub App, Claude auth for Actions, host tokens, key rotation | [reference/prerequisites.md](reference/prerequisites.md) |
 | 4 | Make `main` the single source of truth, retire an old live branch | [reference/main-and-rules.md](reference/main-and-rules.md) |
 | 5 | Claude rules in the repo: CLAUDE.md section, the hook (copy and test it), `/ship`, PR template | [reference/main-and-rules.md](reference/main-and-rules.md) |
-| 6 | The gate (`tests.yml`, `pr-title.yml`), then the ruleset that locks `main` | [reference/gate.md](reference/gate.md) |
+| 6 | The gate (`tests.yml`, `pr-title.yml`), a test with every change ("Tests added" and coverage checks), then the ruleset that locks `main` | [reference/gate.md](reference/gate.md) |
 | 7 | AI review on every PR | [reference/review.md](reference/review.md) |
 | 8 | Staging, Promote to production, verify, tag and release, rollback; host adapters | [reference/deploy.md](reference/deploy.md) |
+| 8b | Public websites only: old addresses, what search engines read, accessibility | [reference/website.md](reference/website.md) |
 | 9 | Versions and release notes (done by Phase 8; document it) | [reference/deploy.md](reference/deploy.md) |
-| 10 | Arcanum security skill, nightly review, Dependabot | [reference/security.md](reference/security.md) |
+| 10 | Security skills installed at a fixed version, nightly review, weekly in-depth audit, Dependabot | [reference/security.md](reference/security.md) |
 | 11 | Alerts and the incident page | [reference/finish.md](reference/finish.md) |
 | 12 | The method upstream: Spec Kit (or GSD Core for very long projects) | [reference/finish.md](reference/finish.md) |
 | 13 | Prove it end to end, try to break it, write the guide and the status checklist | [reference/finish.md](reference/finish.md) |
@@ -95,9 +97,17 @@ Read each reference file when you reach its phase, not before. Open one PR per p
 | `templates/deploy-staging.yml` | `.github/workflows/deploy-staging.yml` | ADAPT the HOST ADAPTER steps |
 | `templates/promote-production.yml` | `.github/workflows/promote-production.yml` | ADAPT the HOST ADAPTER steps |
 | `templates/rollback.yml` | `.github/workflows/rollback.yml` | ADAPT the HOST ADAPTER step |
-| `templates/arcanum-skill.md` | `.claude/skills/arcanum/SKILL.md` | Plus the two reference docs, see security.md |
+| `templates/tests-added.sh` | `.github/scripts/tests-added.sh` | "Tests added" check |
+| `templates/coverage-check.py` | `.github/scripts/coverage-check.py` | Coverage must not go down |
+| `templates/check-redirects.py`, `seo-check.py`, `a11y-check.mjs` | `.github/scripts/` | Public websites only |
+| `templates/key-pages.txt`, `redirects.csv` | `.github/website/` | Public websites only; fill them |
+| `templates/vendor-lock.json`, `fetch-vendored.py` | run from the skill, not copied | Installs Arcanum and security-audit at a fixed version, checked file by file |
+| `templates/arcanum-skill.md` | `.claude/skills/arcanum/SKILL.md` | After fetch-vendored, see security.md |
+| `templates/weekly-security-audit.yml` | `.github/workflows/weekly-security-audit.yml` | Weekly in-depth audit |
 | `templates/nightly-security.yml` | `.github/workflows/nightly-security.yml` | Or a Claude routine on the web |
 | `templates/dependabot.yml` | `.github/dependabot.yml` | One entry per part and ecosystem |
+
+**Checks that stop a change, checks that warn.** A check either stops the change (it cannot go in until fixed) or only warns (a message, the change can still go in). The tests, the leaked-key scan, the PR title and, on websites, the old addresses stop the change from day one. The newer checks (tests added, coverage, search engines, accessibility) only warn at first, so false alarms never block non-technical users; each one is switched to blocking with one repository variable once it has proven right. Say this to the user in plain words when you set them up.
 
 Every template marked ADAPT contains steps that say `ADAPT`. None may remain when you open the PR: search for `ADAPT` before pushing. Run `actionlint` on the workflows if it is available.
 

@@ -1,0 +1,4 @@
+# Key pages checked after each staging update (one path per line).
+# Pick 5 to 15 pages that matter most: home, the main sections, one page of
+# each type (a restaurant, an event, an article), search, contact.
+/

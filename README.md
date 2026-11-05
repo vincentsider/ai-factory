@@ -10,10 +10,13 @@ AI agents write code fast. Without a frame, that speed turns into untested chang
 
 - `main` as the single source of truth, locked by a GitHub ruleset with **no bypass**, not even for the owner
 - pull requests only, with one required **Test** gate (build, tests, leaked-key scan) and a **PR title** check
+- **a test with every change**: the rule is written for Claude, and two checks watch it (a change to the code without a test is flagged; the share of code covered by tests must not go down)
 - a Claude **AI review** on every pull request (advice, never blocking)
 - **staging** that updates on every merge, then a **Promote to production** button that only listed people can press
 - a check that each environment really runs the new commit, **dated release tags** (`v2026.12.15-1`) with release notes, and a **Rollback** button
-- a **nightly AI security review** (Arcanum sec-context catalogue), weekly **Dependabot** updates, alerts when a pipeline run fails
+- for **public websites**: old addresses must lead to the right new page, what Google and AI search engines read is checked after each update, and accessibility is tested in a real browser
+- a **nightly AI security review** (Arcanum sec-context catalogue), a **weekly in-depth security audit** (Cloudflare's security-audit skill, read-only, capped cost), weekly **Dependabot** updates, alerts when a pipeline run fails
+- outside skills installed at a **fixed version**, each file checked against its fingerprint, with credit to their authors
 - the Claude Code rules inside the repo: a `CLAUDE.md` section, a `/ship` routine, and a **hook** that blocks Claude from pushing to `main`, deploying from its session, starting the production buttons or weakening protection (35 tested cases)
 - the method upstream: Spec Kit (or GSD Core for very long projects)
 
@@ -92,7 +95,7 @@ tests/run.sh                    every check, locally and in CI
 
 MIT licence, by Vincent Sider ([DeepBlocker.ai](https://deepblocker.ai)). Built from a production pipeline and the mistakes it made first.
 
-The nightly security review uses [sec-context](https://github.com/Arcanum-Sec/sec-context) by Arcanum Information Security (CC BY 4.0). It is downloaded into your repository at setup, with attribution, not redistributed here.
+The nightly security review uses [sec-context](https://github.com/Arcanum-Sec/sec-context) by Arcanum Information Security (CC BY 4.0). The weekly audit uses [security-audit](https://github.com/cloudflare/security-audit-skill) by Cloudflare (MIT). Both are downloaded into your repository at setup, at a fixed version, with attribution, not redistributed here.
 
 ---
 

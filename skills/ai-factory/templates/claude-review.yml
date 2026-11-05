@@ -46,7 +46,8 @@ jobs:
             2. Security: auth and permission checks, input validation, secrets in code,
                injection, unsafe data access.
             3. The project rules in CLAUDE.md.
-            4. Missing tests for changed behaviour.
+            4. Tests: changed behaviour without a test that proves it, a test deleted or
+               weakened (assertions removed, skipped, loosened) to make the gate pass.
 
             Only report real, specific problems, with file and line. Skip style
             nitpicks. Use inline comments for specific issues and one short summary
