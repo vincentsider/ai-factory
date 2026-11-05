@@ -52,7 +52,7 @@ jobs:
           COUNT=$(git diff --name-only --diff-filter=AMR "$BASE" HEAD -- \
             '*.ts' '*.tsx' '*.js' '*.jsx' '*.mjs' '*.astro' '*.py' '*.go' '*.rb' '*.php' '*.java' '*.rs' '*.sql' \
             'wrangler.*' '*.toml' 'Dockerfile' '.github/workflows/*' \
-            ':!**/__tests__/**' ':!**/*.test.*' ':!**/*.spec.*' ':!docs/**' | grep -c . || true)
+            ':!**/__tests__/**' ':!**/*.test.*' ':!**/*.spec.*' ':!docs/**' ':!Docs/**' | grep -c . || true)
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "Changed files since $SINCE: $COUNT"
@@ -100,7 +100,7 @@ jobs:
         if: always() && steps.changes.outputs.count != '0'
         run: |
           R=".security-audit/run-${{ github.run_number }}"
-          if [ -n "$R" ] && [ -f "$R/REPORT.md" ]; then
+          if [ -f "$R/REPORT.md" ]; then
             cat "$R/REPORT.md" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "::error::The audit finished without writing REPORT.md"

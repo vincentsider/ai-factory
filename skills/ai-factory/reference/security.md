@@ -7,7 +7,7 @@ mkdir -p .claude/skills/arcanum
 python3 "${CLAUDE_SKILL_DIR}/templates/fetch-vendored.py" "${CLAUDE_SKILL_DIR}/templates/vendor-lock.json"
 cp "${CLAUDE_SKILL_DIR}/templates/arcanum-skill.md" .claude/skills/arcanum/SKILL.md
 ```
-It writes a `SOURCE.md` next to each skill (author, licence, commit, date): keep it, the licences require the credit. Never edit the downloaded files; to update them, update the lock file in ai-factory.
+Check that git will keep the files: `git check-ignore -v .claude/skills/security-audit/SKILL.md`. Some repositories ignore `.claude/skills/`; then add them with `git add -f .claude/skills/security-audit .claude/skills/arcanum`, and say so in the PR. It writes a `SOURCE.md` next to each skill (author, licence, commit, date): keep it, the licences require the credit. Never edit the downloaded files; to update them, update the lock file in ai-factory.
 
 ## 10.2 Nightly review
 Create the label: `gh api repos/{owner}/{repo}/labels -f name=security -f color=B60205`.
