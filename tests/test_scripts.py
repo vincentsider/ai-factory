@@ -252,6 +252,35 @@ class TestsAdded(unittest.TestCase):
             r = self.check(["src/agenda.ts", test_file], env={"TESTS_ADDED_MODE": "block"})
             self.assertEqual(r.returncode, 0, test_file + r.stdout)
 
+    def test_deleted_test_is_flagged_even_without_code(self):
+        d, _ = self.repo(["src/agenda.test.ts", "src/agenda.ts"])
+        g = lambda *a: subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *a], cwd=d, check=True, capture_output=True)
+        before = subprocess.run(["git", "rev-parse", "HEAD"], cwd=d, capture_output=True, text=True).stdout.strip()
+        g("rm", "-q", "src/agenda.test.ts")
+        g("commit", "-q", "-m", "drop test")
+        r = run(["bash", str(T / "tests-added.sh"), before, "HEAD"], cwd=d)
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("deletes test files", r.stdout)
+        self.assertIn("::warning::", r.stdout)
+        r = run(["bash", str(T / "tests-added.sh"), before, "HEAD"], env={"TESTS_ADDED_MODE": "block"}, cwd=d)
+        self.assertEqual(r.returncode, 1)
+
+    def test_changes_on_main_meanwhile_are_not_counted(self):
+        # The branch only touches docs; main meanwhile gained code and deleted a test.
+        d, base = self.repo(["src/x.test.ts"])
+        g = lambda *a: subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *a], cwd=d, check=True, capture_output=True, text=True)
+        start = g("rev-parse", "HEAD").stdout.strip()
+        g("switch", "-q", "-c", "feature")
+        pathlib.Path(d, "README.md").write_text("docs\n")
+        g("add", "-A"); g("commit", "-q", "-m", "docs")
+        g("switch", "-q", "main")
+        pathlib.Path(d, "src/other.ts").write_text("x\n")
+        g("rm", "-q", "src/x.test.ts")
+        g("add", "-A"); g("commit", "-q", "-m", "main moves on")
+        r = run(["bash", str(T / "tests-added.sh"), "main", "feature"], env={"TESTS_ADDED_MODE": "block"}, cwd=d)
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("No code file changed", r.stdout)
+
     def test_docs_config_and_label_pass(self):
         self.assertEqual(self.check(["README.md", "docs/a.md", "astro.config.mjs"], env={"TESTS_ADDED_MODE": "block"}).returncode, 0)
         self.assertEqual(self.check(["src/a.ts"], env={"TESTS_ADDED_MODE": "block", "SKIP_TESTS_ADDED": "true"}).returncode, 0)

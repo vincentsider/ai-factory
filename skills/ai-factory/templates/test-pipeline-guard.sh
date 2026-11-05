@@ -62,5 +62,11 @@ check 2 "echo hello; firebase deploy"
 check 0 "git commit -m 'git push origin main'"
 check 0 "npm test"
 
+echo "--- cd into another folder first"
+git switch -q main
+git worktree add -q "$TMP/wt" -b feat/wt >/dev/null 2>&1
+check 0 "cd $TMP/wt && git push"
+check 2 "cd $TMP && git push"
+
 echo
 if [ "$fail" = 0 ]; then echo "All cases behave as expected."; else echo "Some cases are WRONG."; exit 1; fi

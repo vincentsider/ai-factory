@@ -17,7 +17,7 @@ AI agents write code fast. Without a frame, that speed turns into untested chang
 - for **public websites**: old addresses must lead to the right new page, what Google and AI search engines read is checked after each update, and accessibility is tested in a real browser
 - a **nightly AI security review** (Arcanum sec-context catalogue), a **weekly in-depth security audit** (Cloudflare's security-audit skill, read-only, capped cost), weekly **Dependabot** updates, alerts when a pipeline run fails
 - outside skills installed at a **fixed version**, each file checked against its fingerprint, with credit to their authors
-- the Claude Code rules inside the repo: a `CLAUDE.md` section, a `/ship` routine, and a **hook** that blocks Claude from pushing to `main`, deploying from its session, starting the production buttons or weakening protection (35 tested cases)
+- the Claude Code rules inside the repo: a `CLAUDE.md` section, a `/ship` routine, and a **hook** that blocks Claude from pushing to `main`, deploying from its session, starting the production buttons or weakening protection (37 tested cases)
 - the method upstream: Spec Kit (or GSD Core for very long projects)
 
 It works with any stack (Node, Python, Go and others) and any host: Cloudflare Workers and Pages, Railway, Vercel, Fly.io, Firebase, Modal, LiveKit Cloud, or a container on a server. Claude discovers the project first, proposes a plan, and stops only for what needs a person: payments, admin rights, secrets, and the production button.

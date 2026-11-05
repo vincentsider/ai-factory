@@ -27,13 +27,22 @@ PR_HINT="Changes reach $PROTECTED_BRANCH only through a pull request: push a fea
 # Split chained commands (; && || | and newlines) and check each part.
 parts=$(printf '%s\n' "$cmd" | sed -E 's/(&&|\|\||;|\|)/\
 /g')
+CDDIR=""
 while IFS= read -r part; do
   p=$(echo "$part" | sed -E 's/^[[:space:]]+//')
   [ -z "$p" ] && continue
+  # Remember "cd DIR" so a later bare "git push" is judged in that folder
+  # (for example a git worktree), not in the session's folder.
+  if echo "$p" | grep -Eq '^cd[[:space:]]+[^[:space:]]+[[:space:]]*$'; then
+    CDDIR=$(echo "$p" | sed -E 's/^cd[[:space:]]+//; s/[[:space:]]+$//; s/^"(.*)"$/\1/')
+    case "$CDDIR" in "~"*) CDDIR="$HOME${CDDIR#\~}" ;; esac
+    continue
+  fi
 
   # ---- 1. git push ----
   if echo "$p" | grep -Eq '^(sudo[[:space:]]+)?git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+push([[:space:]]|$)'; then
     dir=$(echo "$p" | sed -nE 's/^git[[:space:]]+-C[[:space:]]+([^[:space:]]+).*/\1/p')
+    [ -z "$dir" ] && dir="$CDDIR"
     args=$(echo "$p" | sed -E 's/^.*git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+push//')
     for a in $args; do
       case "$a" in

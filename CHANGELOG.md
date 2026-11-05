@@ -1,5 +1,14 @@
 # Changes
 
+## 1.1.1 (November 2026)
+
+Fixes found while installing 1.1 on a real repository:
+- "Tests added" flags deleted test files, and compares only the branch's own changes (from the merge base), not what main gained meanwhile.
+- The accessibility check runs even when an earlier website check failed in block mode.
+- The weekly audit: the report check, and `Docs/` excluded like `docs/`.
+- The hook judges a bare `git push` in the folder of a preceding `cd`, so work in a git worktree is not wrongly blocked (2 new cases).
+- security.md: check that `.gitignore` does not hide the installed skills.
+
 ## 1.1.0 (November 2026)
 
 - **A test with every change.** The rule is now written in the project's `CLAUDE.md` and in the `/ship` routine: new behaviour gets a new test, a bug gets a test that reproduces it before the fix, no test is deleted or weakened to pass. Two new checks watch it: "Tests added" (a change to the code without a test is flagged, label `no-test-needed` for the rare exception) and coverage (the share of code covered by tests must not go down compared with main). Both warn at first and can be switched to blocking with one repository variable.
