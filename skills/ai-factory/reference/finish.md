@@ -16,7 +16,7 @@ The pipeline makes changes safe; the method makes requests clear.
 # Phase 13: prove it, then document
 
 1. **The drill.** A tiny real change (a line of copy, a footer version) goes through every step: branch, PR, gate, review, merge, staging verified, the person presses Promote, production verified, tag and release created. Then the person runs Rollback to the previous tag, and Promote again. Time each step in `docs/cicd/setup-log.md`.
-2. **Try to break it.** Show that a push to `main` is blocked by the hook and refused by GitHub; a PR with a failing test cannot merge; Promote refuses a commit that is not on staging; the hook blocks `gh workflow run promote-production.yml` and this project's host deploy command.
+2. **Try to break it.** Show that a push to `main` is blocked by the hook and refused by GitHub; a PR with a failing test cannot merge; a PR that changes code without a test gets the "Tests added" warning; on a website, a broken old address makes staging red and Promote refuses it; Promote refuses a commit that is not on staging; the hook blocks `gh workflow run promote-production.yml` and this project's host deploy command.
 3. **Write `docs/cicd/00-overview.md`**, the day-to-day guide in plain language: the short version in 7 lines; a table of every piece (where it lives, what it does, can it be skipped); how to promote; how to roll back; the secrets (names only); the costs.
 4. **End it with a status checklist:** implemented (ticked), not yet (unticked), next steps in order. Be honest about gaps.
 5. **Final message:** what is live now, what each of the two buttons does, what the user still has to do (rotate keys, buy a plan, enable a setting), and what is left.

@@ -93,9 +93,30 @@ jobs:
           fi
           echo "### Production is on \`${GITHUB_SHA::7}\`, released as $TAG" >> "$GITHUB_STEP_SUMMARY"
 
+  website-checks:
+    name: Website checks on production
+    # Public websites only. The new version is already live: a problem here
+    # opens a pipeline-failure issue so it is fixed at once (or rolled back).
+    needs: production
+    if: vars.PUBLIC_WEBSITE == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Old addresses lead to the right page
+        if: hashFiles('.github/website/redirects.csv') != ''
+        env:
+          REDIRECTS_MODE: ${{ vars.REDIRECTS_MODE || 'block' }}
+        run: python3 .github/scripts/check-redirects.py .github/website/redirects.csv "${{ vars.PRODUCTION_URL }}"
+      - name: What Google and AI search engines read
+        env:
+          SEO_MODE: ${{ vars.SEO_MODE || 'warn' }}
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+        run: python3 .github/scripts/seo-check.py .github/website/key-pages.txt "${{ vars.PRODUCTION_URL }}"
+
   alert:
     name: Alert on failure
-    needs: [guard, production]
+    needs: [guard, production, website-checks]
     if: failure()
     runs-on: ubuntu-latest
     permissions:

@@ -4,6 +4,10 @@ set -euo pipefail
 S=skills/ai-factory
 echo "== hook tests"
 bash $S/templates/test-pipeline-guard.sh $S/templates/pipeline-guard.sh
+echo "== scripts installed in projects (local fake website)"
+python3 -W ignore tests/test_scripts.py
+node --check $S/templates/a11y-check.mjs
+python3 -c "import json;json.load(open('$S/templates/vendor-lock.json'))"
 echo "== skill front matter"
 python3 tests/validate_skill.py $S
 echo "== install manifest matches the skill files"

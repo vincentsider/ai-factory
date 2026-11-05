@@ -42,6 +42,8 @@ Repository **variables** (same page, Variables tab):
 - `STAGING_URL`, `PRODUCTION_URL`: base URLs of the web parts
 - `VERSION_PATH`: the version endpoint path, default `/version.json`
 - `PROD_DEPLOYERS`: the GitHub logins allowed to promote and roll back, comma separated
+- `PUBLIC_WEBSITE`: `true` if the project is a website anyone can visit (turns on the website checks, see website.md)
+- Optional, later: `TESTS_ADDED_MODE`, `COVERAGE_MODE`, `SEO_MODE`, `A11Y_MODE` (`warn` or `block`), `REDIRECTS_MODE` (`block` by default), `AUDIT_BUDGET` (default 20)
 
 ## 3.6 Live keys found in history
 For each live key found in Phase 2, the person rotates it in the provider's dashboard and updates it in the host. You cannot do this. Track it as one GitHub issue with a checklist, without values.

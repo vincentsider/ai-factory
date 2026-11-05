@@ -18,10 +18,25 @@ Copy `${CLAUDE_SKILL_DIR}/templates/tests.yml` and adapt it:
 
 Open the PR, watch the run, show it green.
 
-## 6.3 `.github/workflows/pr-title.yml`
+## 6.3 Every change comes with a test
+This is a rule in `CLAUDE.md` and in `/ship` (Phase 5), and two checks in `tests.yml` watch it:
+- **"Tests added"** (job in `tests.yml`, script `tests-added.sh`): a pull request that changes code without changing any test is flagged. Copy `${CLAUDE_SKILL_DIR}/templates/tests-added.sh` to `.github/scripts/tests-added.sh`. Create the label `no-test-needed` (`gh api repos/{owner}/{repo}/labels -f name=no-test-needed -f color=C5DEF5`) for the rare change that truly cannot be tested; the reason goes in the PR. Adjust the code and test patterns at the top of the script if the project names tests differently.
+- **Coverage** (steps in the part's job, script `coverage-check.py`): the share of code covered by tests must not go down compared with main. Copy `${CLAUDE_SKILL_DIR}/templates/coverage-check.py` to `.github/scripts/coverage-check.py`. Add a coverage command per part and point `COVERAGE_REPORT` at its file:
+  - Vitest: `vitest run --coverage --coverage.reporter=json-summary` -> `coverage/coverage-summary.json` (needs `@vitest/coverage-v8`)
+  - Jest: `jest --coverage --coverageReporters=json-summary` -> `coverage/coverage-summary.json`
+  - Python: `pytest --cov --cov-report=json` -> `coverage.json`
+  - Go: `go test -coverprofile=cover.out ./... && go tool cover -func=cover.out > cover.txt` -> `cover.txt`
+  - anything with an lcov or Cobertura report works too
+  After each merge, main keeps its share as the reference (artifact `coverage-reference`). The first pull request after setup has no reference yet; that is normal.
+
+**Warn or block.** Both checks only warn at first, because a new check can raise false alarms and non-technical users must never be stuck on noise. Explain this to the user in one sentence. When the check has been right for a few weeks, set the repository variable `TESTS_ADDED_MODE` or `COVERAGE_MODE` to `block` (Settings, Secrets and variables, Actions, Variables): from then on, the change cannot go in until it has its test. Write this next step in `docs/cicd/00-overview.md`.
+
+Also check the existing tests are real: a part whose tests only use fakes of the code they claim to test, or that has no test at all, gets a first test of its main path before the gate is required.
+
+## 6.4 `.github/workflows/pr-title.yml`
 Copy `${CLAUDE_SKILL_DIR}/templates/pr-title.yml`. Dependabot titles pass because its config uses the `chore(deps)` prefix (Phase 10).
 
-## 6.4 Lock `main` with a ruleset
+## 6.5 Lock `main` with a ruleset
 Only after `Test` and `PR title` have each reported at least once.
 - Terminal: `gh api -X POST repos/{owner}/{repo}/rulesets --input "${CLAUDE_SKILL_DIR}/templates/ruleset-protect-main.json"`, then read it back with `gh api repos/{owner}/{repo}/rulesets`.
 - Web: HUMAN ACTION, Settings, Rules, Rulesets, New branch ruleset, with the same content: active; bypass list empty; target the default branch; restrict deletions; block force pushes; require a pull request (0 approvals, squash only); require status checks `Test` and `PR title`, branches up to date.

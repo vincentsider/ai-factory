@@ -1,0 +1,5 @@
+old,new
+# One line per old address of the previous site, and the page it must lead to.
+# Old addresses come from the old site map and from Google Search Console
+# (Pages report). Paths or full URLs both work.
+# /restaurants/le-mas-de-la-plage.html,/restaurants/le-mas-de-la-plage

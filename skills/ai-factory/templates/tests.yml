@@ -7,6 +7,14 @@ name: Tests
 # If it is red: open the failed job, fix the cause in the same PR. Never
 # weaken a check to make it pass.
 #
+# Every change comes with a test. Two checks watch it:
+#   - "Tests added": a pull request that changes code without changing a test
+#     gets flagged.
+#   - coverage: the share of code covered by tests must not go down compared
+#     with main (main records the reference after each merge).
+# Both only warn at first. Repository variables TESTS_ADDED_MODE and
+# COVERAGE_MODE set to "block" make them stop the change.
+#
 # ADAPT: one job per deployable part (copy "app"), with its real check
 # commands. Delete the "changes" filter if the repo has a single part.
 
@@ -20,6 +28,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # to read main's coverage reference
 
 concurrency:
   group: tests-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
@@ -58,6 +67,28 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check # typecheck, lint, build, tests (ADAPT to the stack)
+      # ADAPT: run the tests with coverage and point COVERAGE_REPORT at the file
+      # the tool writes (see coverage-check.py for the formats it reads).
+      - name: Tests with coverage
+        run: npm run test:coverage
+      - name: Coverage must not go down
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERAGE_MODE: ${{ vars.COVERAGE_MODE || 'warn' }}
+          COVERAGE_REPORT: coverage/coverage-summary.json
+        run: |
+          RUN=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow tests.yml --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$RUN" ] && [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            gh run download "$RUN" --repo "$GITHUB_REPOSITORY" --name coverage-reference --dir .coverage-ref || true
+          fi
+          python3 .github/scripts/coverage-check.py "$COVERAGE_REPORT" --baseline .coverage-ref/coverage.txt --write coverage.txt
+      - name: Keep the coverage reference (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-reference
+          path: coverage.txt
+          retention-days: 90
       - name: Dependency audit (report only until the backlog is clear)
         continue-on-error: true
         run: npm audit --omit=dev --audit-level=high
@@ -86,9 +117,23 @@ jobs:
           echo "Scanning: $RANGE"
           ./gitleaks git --no-banner --redact --log-opts="$RANGE" .
 
+  tests-added:
+    name: Tests added
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Code changes come with a test
+        env:
+          TESTS_ADDED_MODE: ${{ vars.TESTS_ADDED_MODE || 'warn' }}
+          SKIP_TESTS_ADDED: ${{ contains(github.event.pull_request.labels.*.name, 'no-test-needed') }}
+        run: bash .github/scripts/tests-added.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+
   test:
     name: Test
-    needs: [app, secrets-scan]
+    needs: [app, secrets-scan, tests-added]
     if: always()
     runs-on: ubuntu-latest
     steps:
