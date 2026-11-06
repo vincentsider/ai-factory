@@ -329,5 +329,35 @@ class FetchVendored(unittest.TestCase):
         self.assertIn("unsafe path", r.stderr + r.stdout)
 
 
+class StartCheck(unittest.TestCase):
+    def check(self, build, start, secs="2"):
+        d = tempfile.mkdtemp()
+        return run(["bash", str(T / "start-check.sh"), build, start, secs], env={"START_CHECK_LOG": os.path.join(d, "start.log")}, cwd=d)
+
+    def test_missing_module_fails(self):
+        r = self.check("true", "echo \"Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/app/dist/x' imported from /app/dist/y.js\" >&2; exit 1")
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("cannot load a module", r.stdout)
+
+    def test_missing_setting_passes(self):
+        r = self.check("true", "echo 'Error: NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set' >&2; exit 1")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("loaded all its modules", r.stdout)
+
+    def test_python_import_error_fails(self):
+        r = self.check("true", "python3 -c 'import a_module_that_does_not_exist_xyz'")
+        self.assertEqual(r.returncode, 1, r.stdout)
+
+    def test_failed_build_fails(self):
+        r = self.check("exit 3", "true")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("production build itself failed", r.stdout)
+
+    def test_server_that_keeps_running_is_stopped_and_passes(self):
+        r = self.check("true", "echo listening; sleep 30", secs="2")
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertIn("listening", r.stdout)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

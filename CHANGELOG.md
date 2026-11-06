@@ -1,5 +1,9 @@
 # Changes
 
+## 1.3.0 (November 2026)
+
+- **Build like production, then start it** (`templates/start-check.sh`, Phase 6.2b). The gate builds with production's exact commands and starts the result for 25 seconds with no settings; a missing module fails, a missing setting does not. It caught, on a real repository, an import that had crashed every production release. Five new tests.
+
 ## 1.2.0 (November 2026)
 
 Saves GitHub Actions minutes (a busy repository hit its spending limit in five days, and GitHub then stops every check on the account):

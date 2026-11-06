@@ -34,6 +34,7 @@ skills/ai-factory/templates/ruleset-protect-main.json
 skills/ai-factory/templates/seo-check.py
 skills/ai-factory/templates/settings.json
 skills/ai-factory/templates/ship-skill.md
+skills/ai-factory/templates/start-check.sh
 skills/ai-factory/templates/test-pipeline-guard.sh
 skills/ai-factory/templates/tests-added.sh
 skills/ai-factory/templates/tests.yml

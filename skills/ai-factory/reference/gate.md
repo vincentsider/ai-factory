@@ -18,6 +18,11 @@ Copy `${CLAUDE_SKILL_DIR}/templates/tests.yml` and adapt it:
 
 Open the PR, watch the run, show it green.
 
+## 6.2b Build like production, then start it
+A CI build can compile less than production does. Then an import production cannot resolve (for example a Node ESM import without its `.js` ending) passes every test and crashes every release at start. Copy `${CLAUDE_SKILL_DIR}/templates/start-check.sh` to `.github/scripts/` and, in each deployable part's job, call it with **the exact build and start commands production uses**: read them in the Dockerfile (`RUN` and `CMD`) or in the host's settings, never guess. It starts the built app with no settings for 25 seconds and fails only on a missing module (Node and Python errors are recognised; add others with `START_CHECK_PATTERNS`). Missing-settings errors are expected and do not fail it, because imports are resolved before any code runs.
+Prove it once: on a throwaway branch, break one import, run the workflow by hand, show the step fails; then show it passes on the real branch. Put both run links in the PR and delete the throwaway branch.
+To save minutes, run it only when the code it builds changes (and nightly).
+
 ## 6.3 Every change comes with a test
 This is a rule in `CLAUDE.md` and in `/ship` (Phase 5), and two checks in `tests.yml` watch it:
 - **"Tests added"** (job in `tests.yml`, script `tests-added.sh`): a pull request that changes code without changing any test is flagged. Copy `${CLAUDE_SKILL_DIR}/templates/tests-added.sh` to `.github/scripts/tests-added.sh`. Create the label `no-test-needed` (`gh api repos/{owner}/{repo}/labels -f name=no-test-needed -f color=C5DEF5`) for the rare change that truly cannot be tested; the reason goes in the PR. Adjust the code and test patterns at the top of the script if the project names tests differently.

@@ -83,6 +83,11 @@ jobs:
       - if: steps.modules.outputs.cache-hit != 'true'
         run: npm ci
       - run: npm run check # typecheck, lint, build, tests (ADAPT to the stack)
+      # ADAPT: build exactly the way production builds (the Dockerfile or the
+      # host's build command), then start it with no settings: a missing
+      # module fails, a missing setting does not. Skip for a library.
+      - name: Build like production and start it
+        run: bash .github/scripts/start-check.sh "npm run build" "node dist/server.js" 25
       # ADAPT: run the tests with coverage and point COVERAGE_REPORT at the file
       # the tool writes (see coverage-check.py for the formats it reads).
       - name: Tests with coverage
