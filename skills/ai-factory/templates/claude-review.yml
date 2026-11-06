@@ -8,7 +8,13 @@ name: Claude review
 on:
   pull_request:
     branches: [main]
-    types: [opened, synchronize, ready_for_review, reopened]
+    # Once per pull request, not on every push (saves most review minutes).
+    # For a fresh review after fixes, add the label "review again".
+    types: [opened, ready_for_review, reopened, labeled]
+    paths-ignore: # no review for documentation-only pull requests
+      - '**/*.md'
+      - 'Docs/**'
+      - 'docs/**'
 
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
@@ -17,7 +23,9 @@ concurrency:
 jobs:
   review:
     # Skip drafts and bot PRs (Dependabot PRs cannot read repository secrets).
-    if: github.event.pull_request.draft == false && !endsWith(github.actor, '[bot]')
+    if: >-
+      github.event.pull_request.draft == false && !endsWith(github.actor, '[bot]') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'review again')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

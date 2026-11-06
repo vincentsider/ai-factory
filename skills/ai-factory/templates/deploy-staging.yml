@@ -1,7 +1,7 @@
 name: Deploy to staging
 
-# Every merge into main: run the gate again, deploy that commit to staging,
-# then check staging really runs it. Nothing deploys on red.
+# Every merge into main: deploy that commit to staging, then check staging
+# really runs it. Nothing reaches main on red: the gate ran on the pull request.
 # Production is NOT touched here: a person presses "Promote to production".
 # Public websites only (repository variable PUBLIC_WEBSITE = true): after the
 # deploy, three website checks run on staging. Old addresses must lead to the
@@ -25,12 +25,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    uses: ./.github/workflows/tests.yml
-
+  # No second test run here: the ruleset only merges up-to-date green pull
+  # requests (squash), so this commit is exactly what the gate tested.
   staging:
     name: Staging
-    needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: staging
@@ -122,7 +120,7 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [test, staging, website-checks]
+    needs: [staging, website-checks]
     if: failure()
     runs-on: ubuntu-latest
     permissions:
