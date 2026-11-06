@@ -4,7 +4,7 @@ description: Set up a professional, AI-safe development lifecycle on any reposit
 license: MIT
 compatibility: Claude Code (terminal, IDE or claude.ai/code). Needs git and a GitHub repository; gh is used when available.
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   author: Vincent Sider (DeepBlocker.ai)
   source: https://github.com/vincentsider/ai-factory
 ---
@@ -97,6 +97,7 @@ Read each reference file when you reach its phase, not before. Open one PR per p
 | `templates/deploy-staging.yml` | `.github/workflows/deploy-staging.yml` | ADAPT the HOST ADAPTER steps |
 | `templates/promote-production.yml` | `.github/workflows/promote-production.yml` | ADAPT the HOST ADAPTER steps |
 | `templates/rollback.yml` | `.github/workflows/rollback.yml` | ADAPT the HOST ADAPTER step |
+| `templates/start-check.sh` | `.github/scripts/start-check.sh` | Builds like production and starts it: a missing module fails |
 | `templates/tests-added.sh` | `.github/scripts/tests-added.sh` | "Tests added" check |
 | `templates/coverage-check.py` | `.github/scripts/coverage-check.py` | Coverage must not go down |
 | `templates/check-redirects.py`, `seo-check.py`, `a11y-check.mjs` | `.github/scripts/` | Public websites only |
