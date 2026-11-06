@@ -10,7 +10,7 @@ Free private repositories cannot protect branches or require checks. Public repo
 On private repositories, "required reviewers" on deployment environments needs GitHub Enterprise. This skill does not need it: production is a button only listed people can run, Claude is blocked from it by the hook, and the workflow refuses a commit that did not pass staging.
 
 ## 3.2 GitHub Actions can run
-Settings, Billing, Actions: minutes left this month, or a spending limit above zero. Pro and Team include about 3,000 Linux minutes a month; a typical gate costs about 2 US cents a run.
+Settings, Billing, Actions: minutes left this month, and a spending limit above zero (for example 50 dollars). When the limit is reached, GitHub stops every check on every repository of the account, and nothing can merge or deploy. Pro and Team include about 3,000 Linux minutes a month. GitHub rounds every job up to a full minute, so many small jobs cost more than their run time suggests; a busy repository can use 1,000 minutes a week.
 
 ## 3.3 The Claude GitHub App
 Needed on the web, and for review and autofix workflows: https://github.com/apps/claude, Configure, choose the account or organisation that owns the repo, select the repository. A repository transferred from a personal account to an organisation needs the app installed on the organisation. An organisation owner may have to approve it (organisation Settings, GitHub Apps).

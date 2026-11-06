@@ -43,7 +43,7 @@ Only after `Test` and `PR title` have each reported at least once.
 
 Why:
 - **No bypass, not even the owner.** Claude acts with the user's GitHub login, so an owner bypass would let any Claude session merge red code. In a real emergency the owner switches the ruleset off with one click and back on after.
-- **0 required approvals** while one person works on the repo: GitHub never lets you approve your own PR. With two or more people, set it to 1; because Claude opens PRs under the user's login, the other person must approve. That is real human review.
+- **0 required approvals: the normal setting.** Most projects have one person, and GitHub never lets you approve your own pull request, so a required approval would block everything. The gate and the Claude review do the checking. Only if a second person joins the project later can it be raised to 1 (then, since Claude opens pull requests under its user's login, the other person approves). Never ask a solo user for a second reviewer.
 - **Squash only**: one PR is one commit on `main`, and its title is the release-note line.
 
 Repository merge settings (terminal: `gh api -X PATCH repos/{owner}/{repo} -F allow_merge_commit=false -F allow_rebase_merge=false -F allow_squash_merge=true -F delete_branch_on_merge=true`; web: HUMAN ACTION, Settings, General, Pull Requests).

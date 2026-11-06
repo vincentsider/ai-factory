@@ -1,5 +1,15 @@
 # Changes
 
+## 1.2.0 (November 2026)
+
+Saves GitHub Actions minutes (a busy repository hit its spending limit in five days, and GitHub then stops every check on the account):
+- The gate no longer runs again after a merge into main (the ruleset already guarantees main is the tested code); a full run every night instead. `deploy-staging` no longer reruns the tests either.
+- Installed packages are cached between runs; the leaked-key scan checks out history without old file contents.
+- The Claude review runs once per pull request (label `review again` for a new one) and skips documentation-only pull requests.
+- The coverage reference comes from the pull request that produced main's latest commit.
+- Working alone is the normal case: the wording on approvals now says so plainly (0 required approvals; a second reviewer only if a second person joins).
+- Prerequisites and lessons: keep a spending limit above zero; GitHub rounds every job up to a minute.
+
 ## 1.1.1 (November 2026)
 
 Fixes found while installing 1.1 on a real repository:

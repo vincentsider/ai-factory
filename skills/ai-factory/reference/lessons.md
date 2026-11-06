@@ -2,6 +2,8 @@
 
 These all happened on the pipeline this skill comes from.
 
+- **A spending limit at zero stops everything.** A busy repository used its month of included minutes in five days; GitHub then refused to start any job, on every repository of the account. Keep a limit above zero and an eye on usage.
+- **Do not test the same commit twice.** With the ruleset (up to date, green, squash), the commit on main is what the pull request tested: no rerun after the merge, a nightly run instead. Documentation-only pull requests skip the code steps. One AI review per pull request, not one per push. Cache installed packages.
 - **Check that Actions can run before trusting a green-looking repo.** Tests there had not run for weeks: the free minutes were used up and every run died in seconds. Nobody noticed.
 - **Production must deploy from `main`.** It deployed from an old side branch while `main` was more than a thousand commits behind.
 - **No owner bypass on the ruleset.** Claude acts with the owner's login.

@@ -10,7 +10,7 @@
 ## 8.2 The three workflows
 Copy from `${CLAUDE_SKILL_DIR}/templates/`:
 - `verify-live.sh` to `.github/scripts/verify-live.sh` (`chmod +x`)
-- `deploy-staging.yml`: every push to `main` reruns the gate (it calls `tests.yml`), migrates and deploys staging, verifies staging runs the commit, writes a summary with the next step
+- `deploy-staging.yml`: every push to `main` migrates and deploys staging (no second test run: the gate tested this exact commit), verifies staging runs the commit, writes a summary with the next step
 - `promote-production.yml`: run by a person from `main`; checks the person is in `PROD_DEPLOYERS`, that "Deploy to staging" succeeded for this commit and that staging runs it; then records the restore point, migrates, deploys, verifies, tags `vYYYY.MM.DD-N` and creates the release with notes from the PR titles
 - `rollback.yml`: run by a person with a release tag; same person check; deploys that tag, verifies; never rolls back data
 
@@ -18,7 +18,7 @@ Replace every step marked `ADAPT` with the host adapter (8.4). Search for `ADAPT
 
 HUMAN ACTION: Settings, Environments: `staging` (no rules) and `production` (Deployment branches and tags: Selected, `main` only; on a public or Enterprise repo also add Required reviewers for a real approval click). Put host secrets that differ per environment as environment secrets.
 
-**Lite profile:** no staging workflow. Rename `promote-production.yml` to `deploy-production.yml`, trigger it on `push` to `main` with a first job `test: uses: ./.github/workflows/tests.yml`, and drop the staging checks from `guard` (keep it from `main`). Keep `rollback.yml`.
+**Lite profile:** no staging workflow. Rename `promote-production.yml` to `deploy-production.yml`, trigger it on `push` to `main` (no second test run: the gate already tested this exact commit), and drop the staging checks from `guard` (keep it from `main`). Keep `rollback.yml`.
 
 **Library profile:** no deploy. A `release.yml` on pushed tags `v*`: runs the gate, builds, publishes with the registry token or trusted publishing, creates the GitHub release with notes.
 

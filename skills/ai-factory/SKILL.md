@@ -4,7 +4,7 @@ description: Set up a professional, AI-safe development lifecycle on any reposit
 license: MIT
 compatibility: Claude Code (terminal, IDE or claude.ai/code). Needs git and a GitHub repository; gh is used when available.
 metadata:
-  version: "1.1.1"
+  version: "1.2.0"
   author: Vincent Sider (DeepBlocker.ai)
   source: https://github.com/vincentsider/ai-factory
 ---
