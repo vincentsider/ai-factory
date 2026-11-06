@@ -2,6 +2,7 @@
 
 These all happened on the pipeline this skill comes from.
 
+- **A review that runs is not a review that posts.** The automatic review ran green on every pull request for days and posted nothing: its combined commands (pipes, `$( )`, heredocs for the comment text) did not match the allowed tools and were refused, and the run still ended "success". Tell it to run one simple command per call and to post its summary with a single `gh pr comment N --body '...'`, then check `permission_denials_count` in the log and that a comment appeared.
 - **Build like production in CI, and start the result.** A CI-only build compiled fewer files than the Dockerfile; an import without its `.js` ending passed every test, then every release crashed at start and production stayed on an old version for hours, without merged security fixes. Starting the production build for a few seconds catches it.
 - **A spending limit at zero stops everything.** A busy repository used its month of included minutes in five days; GitHub then refused to start any job, on every repository of the account. Keep a limit above zero and an eye on usage.
 - **Do not test the same commit twice.** With the ruleset (up to date, green, squash), the commit on main is what the pull request tested: no rerun after the merge, a nightly run instead. Documentation-only pull requests skip the code steps. One AI review per pull request, not one per push. Cache installed packages.

@@ -1,5 +1,10 @@
 # Changes
 
+## 1.3.1 (November 2026)
+
+- **The Claude review posts its summary again.** On a real repository it ran green on every pull request and posted nothing: its combined commands were refused by the allowed-tools rules. The template now lets it read the change with `git diff`, `git log` and `git show` (history fetched without old file contents), tells it to run one simple command per call, and to post the summary with a single `gh pr comment N --body '...'`. Verified there: 0 refused calls, summary posted.
+- Lesson added: check `permission_denials_count` and that a comment appeared, not only a green run.
+
 ## 1.3.0 (November 2026)
 
 - **Build like production, then start it** (`templates/start-check.sh`, Phase 6.2b). The gate builds with production's exact commands and starts the result for 25 seconds with no settings; a missing module fails, a missing setting does not. It caught, on a real repository, an import that had crashed every production release. Five new tests.
